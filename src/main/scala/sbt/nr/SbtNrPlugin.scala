@@ -9,9 +9,9 @@ object SbtNrPlugin extends AutoPlugin {
   object autoImport {
     val NewRelic = config("newrelic").extend(Compile)
 
-    val agentJar = SettingKey[String]("agent-jar")
-    val configFile = SettingKey[String]("config-file")
-    val environment = SettingKey[String]("environment")
+    val newRelicAgentJar = SettingKey[String]("NewRelic agent jar file.")
+    val newRelicConfigFile = SettingKey[String]("NewRelic configuration file, see https://docs.newrelic.com/docs/agents/java-agent/configuration/java-agent-configuration-config-file for documentation.")
+    val newRelicEnvironment = SettingKey[String]("NewRelic run environment, see https://docs.newrelic.com/docs/apm/new-relic-apm/maintenance/connecting-hosts-your-account#environments for documentation.")
 
     lazy val defaultNrSettings: Seq[Def.Setting[_]] = Seq(
       inTask(run)(Seq(runner <<= nrRunner)).head,
@@ -33,13 +33,24 @@ object SbtNrPlugin extends AutoPlugin {
 
   import autoImport._
 
-  def nrRunner: Initialize[Task[ScalaRun]] = Def.task {    
-    if (agentJar.value == "" || configFile.value == "") throw new RuntimeException("You must provide agentJar and configFile settings.")
+  private def nrRunner: Initialize[Task[ScalaRun]] = Def.task {    
+    
+    val errorMsg = 
+      if (newRelicAgentJar.value == "") {
+        Some("Set 'newRelicAgentJar in NewRelic := \"<filename>\"' in your build to the location of the New Relic agent jar file.")
+      } else if (newRelicConfigFile.value == "") {
+        Some("Create a configuration file for New Relic and set 'newRelicConfigFile := \"<filename>\"' in your build.")
+      } else None
+
+    errorMsg match {
+      case Some(error) => throw new RuntimeException(error)
+      case None => // all good 
+    }
 
     val nrJavaOptions: Seq[String] = Seq(
-      s"-javaagent:${agentJar.value}",
-      s"-Dnewrelic.config.file=${configFile.value}",
-      s"-Dnewrelic.environment=${environment.value}",
+      s"-javaagent:${newRelicAgentJar.value}",
+      s"-Dnewrelic.config.file=${newRelicConfigFile.value}",
+      s"-Dnewrelic.environment=${newRelicEnvironment.value}",
       "-Dnewrelic.enable.java.8")
 
     val forkConfig = ForkOptions(javaHome.value, outputStrategy.value, Seq.empty, Some(baseDirectory.value), nrJavaOptions, connectInput.value)
@@ -53,8 +64,8 @@ object SbtNrPlugin extends AutoPlugin {
 
   override val projectSettings = 
     Seq(
-      agentJar := "",
-      configFile := "",
-      environment := "development") ++ 
+      newRelicAgentJar := "",
+      newRelicConfigFile := "",
+      newRelicEnvironment := "development") ++ 
     inConfig(NewRelic)(defaultNrSettings)
 }
