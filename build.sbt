@@ -5,7 +5,7 @@ sbtPlugin := true
 
 name := "sbt-nr"
 
-organization := "com.typesafe.sbt"
+organization := "com.typesafe.sbtnr"
 
 // GIT
 versionWithGit
@@ -20,5 +20,7 @@ libraryDependencies ++=
  	"com.novocode" % "junit-interface" % "0.11" % "test")
 
 val typesafeIvySnapshots = Resolver.url("typesafe-ivy-private-snapshots", new URL("http://private-repo.typesafe.com/typesafe/ivy-snapshots/"))(Resolver.ivyStylePatterns)
+
+publishMavenStyle := false
 
 publishTo := Some(typesafeIvySnapshots)
