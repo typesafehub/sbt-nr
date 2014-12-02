@@ -8,23 +8,6 @@ import java.io.File
 
 object SbtNrPlugin extends AutoPlugin {
 
-  lazy val defaultNrSettings: Seq[Def.Setting[_]] = Seq(
-    inTask(run)(Seq(runner <<= nrRunner)).head,
-
-    mainClass in run <<= mainClass in run in Compile,
-
-    unmanagedClasspath <<= unmanagedClasspath in Runtime,
-    managedClasspath <<= managedClasspath in Runtime,
-    internalDependencyClasspath <<= internalDependencyClasspath in Runtime,
-    externalDependencyClasspath <<= Classpaths.concat(unmanagedClasspath, managedClasspath),
-    dependencyClasspath <<= Classpaths.concat(internalDependencyClasspath, externalDependencyClasspath),
-    exportedProducts <<= exportedProducts in Runtime,
-    fullClasspath <<= Classpaths.concatDistinct(exportedProducts, dependencyClasspath),
-
-    UIKeys.backgroundRunMain <<= SbtBackgroundRunPlugin.backgroundRunMainTask(fullClasspath, runner in run),
-    UIKeys.backgroundRun <<= SbtBackgroundRunPlugin.backgroundRunTask(fullClasspath, mainClass in run, runner in run)
-  )
-
   object autoImport {
     val NewRelic = config("newrelic").extend(Compile)
     val newRelicAgentJar = SettingKey[String]("NewRelic agent jar file.")
@@ -33,6 +16,20 @@ object SbtNrPlugin extends AutoPlugin {
   }
 
   import autoImport._
+
+  lazy val defaultNrSettings: Seq[Def.Setting[_]] = Seq(
+    inTask(run)(Seq(runner <<= nrRunner)).head,
+    mainClass in run <<= mainClass in run in Compile,
+    unmanagedClasspath <<= unmanagedClasspath in Runtime,
+    managedClasspath <<= managedClasspath in Runtime,
+    internalDependencyClasspath <<= internalDependencyClasspath in Runtime,
+    externalDependencyClasspath <<= Classpaths.concat(unmanagedClasspath, managedClasspath),
+    dependencyClasspath <<= Classpaths.concat(internalDependencyClasspath, externalDependencyClasspath),
+    exportedProducts <<= exportedProducts in Runtime,
+    fullClasspath <<= Classpaths.concatDistinct(exportedProducts, dependencyClasspath),
+    UIKeys.backgroundRunMain <<= SbtBackgroundRunPlugin.backgroundRunMainTask(fullClasspath, runner in run),
+    UIKeys.backgroundRun <<= SbtBackgroundRunPlugin.backgroundRunTask(fullClasspath, mainClass in run, runner in run)
+  )
 
   private[nr] def verifySettings(jarFilePath: String, configFilePath: String) = {
     def exists(path: String): Boolean = (new File(path)).exists
@@ -58,21 +55,27 @@ object SbtNrPlugin extends AutoPlugin {
     } 
   }
 
-  private def nrRunner: Initialize[Task[ScalaRun]] = Def.task {        
+  def javaOptions: Initialize[Task[Seq[String]]] = Def.task {
     verifySettings(newRelicAgentJar.value, newRelicConfigFile.value)
 
-    val nrJavaOptions: Seq[String] = Seq(
+    val result = Seq(
       s"-javaagent:${newRelicAgentJar.value}",
       s"-Dnewrelic.config.file=${newRelicConfigFile.value}",
       s"-Dnewrelic.environment=${newRelicEnvironment.value}",
       "-Dnewrelic.enable.java.8")
 
-    val forkConfig = ForkOptions(javaHome.value, outputStrategy.value, Seq.empty, Some(baseDirectory.value), nrJavaOptions, connectInput.value)
-        
-    if (fork.value) new ForkRun(forkConfig) else throw new RuntimeException("This plugin can only be run in forked mode")
+    println(s"JavaOptions: ${result}")
+
+    result
   }
 
-  override def requires = plugins.JvmPlugin
+  private[nr] def nrRunner: Initialize[Task[ScalaRun]] = Def.task {        
+    val forkConfig = ForkOptions(javaHome.value, outputStrategy.value, Seq.empty, Some(baseDirectory.value), javaOptions.value, connectInput.value)        
+    if (fork.value) new ForkRun(forkConfig) 
+    else throw new RuntimeException("This plugin can only be run in forked mode")
+  }
+
+  override def requires = sbt.SbtBackgroundRunPlugin
 
   override def trigger = allRequirements
 
