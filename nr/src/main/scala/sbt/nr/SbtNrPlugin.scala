@@ -58,7 +58,7 @@ object SbtNrPlugin extends AutoPlugin {
     } 
   }
 
-  private def nrRunner: Initialize[Task[ScalaRun]] = Def.task {        
+  def nrRunner: Initialize[Task[ScalaRun]] = Def.task {        
     verifySettings(newRelicAgentJar.value, newRelicConfigFile.value)
 
     val nrJavaOptions: Seq[String] = Seq(
