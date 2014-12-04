@@ -72,7 +72,7 @@ object SbtNrPlugin extends AutoPlugin {
     if (fork.value) new ForkRun(forkConfig) else throw new RuntimeException("This plugin can only be run in forked mode")
   }
 
-  override def requires = plugins.JvmPlugin
+  override def requires = SbtUIPlugin
 
   override def trigger = allRequirements
 
