@@ -14,10 +14,10 @@ object SbtNrBuild extends Build {
 
   lazy val sbtNrMain = Project(
     id = "sbt-nr-main",
-    base = file("nr"),    
+    base = file("nr"),
     settings = defaultSettings ++ Seq(
       name := "sbt-nr-main",
-      libraryDependencies ++= Seq(Dependencies.uiPlugin)
+      libraryDependencies ++= Seq(Dependencies.sbtCoreNextPlugin)
     )
   )
 
@@ -27,9 +27,9 @@ object SbtNrBuild extends Build {
     dependencies = Seq(sbtNrMain),
     settings = defaultSettings ++ Seq(
       name := "sbt-nr-play",
-      libraryDependencies ++= Seq(Dependencies.playPlugin)
+      libraryDependencies ++= Seq(Dependencies.playForkRunPlugin)
     )
-  )  
+  )
 
   lazy val typesafeIvyReleases = Resolver.url("Typesafe Ivy Releases Repo", new URL("http://repo.typesafe.com/typesafe/releases/"))(Resolver.ivyStylePatterns)
 
@@ -41,8 +41,9 @@ object SbtNrBuild extends Build {
     version <<= version in ThisBuild,
     publishMavenStyle := false,
     publishTo := Some(typesafeIvySnapshots),
-    resolvers += typesafeIvyReleases      
-  )  
+    resolvers += typesafeIvyReleases,
+    libraryDependencies ++= Seq(Dependencies.junit, Dependencies.junitInterface)
+  )
 
   lazy val noPublishSettings: Seq[Setting[_]] = Seq(
     publish := {},
